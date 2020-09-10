@@ -35,9 +35,22 @@ class MultiKModel:
     def vector(self, vocab):
         return self.data[len(vocab)].model[vocab]
 
-    def most_similar(self, vocab, topn=10):
-        # Note this only works for returning k-mers of the same length.
-        return self.data[len(vocab)].model.most_similar(vocab, topn=topn)
+    def most_similar(self, vocab,
+                     same_k=True,
+                     topn=10):
+        if same_k:
+            return self.data[len(vocab)].model.most_similar(vocab, topn=topn)
+        else:
+            # Vector representation of what we're searching for.
+            vec = self.vector(vocab)
+            # These are for sorting the output.
+            dtype = [('kmer', 'S10'), ('cosine', float)]
+            scores = []
+            for model in self.data.values():
+                temp = model.similar_by_vector(vec, topn=topn)
+                scores.append(np.array(temp, dtype=dtype))
+            # Return the values in most to least similar order.
+            return np.sort(np.concatenate(scores, axis=0), axis=0, order='cosine')[:-(topn + 1):-1]
 
     def unitvec(self, vec):
         return matutils.unitvec(vec)
